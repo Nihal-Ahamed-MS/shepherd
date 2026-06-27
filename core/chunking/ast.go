@@ -26,7 +26,32 @@ var (
 	}
 )
 
-func parseFile(currentPath, rootPath string, wg *sync.WaitGroup, sem chan struct{}) {
+func walkTree(cursor *tree_sitter.TreeCursor, content []byte, filePath string, allowedKinds map[string]bool, codebase *types.CodebaseAST, mut *sync.Mutex) {
+	node := cursor.Node()
+
+	if node.IsNamed() && allowedKinds[node.Kind()] {
+		chunk := types.Chunk{
+			SourceCode: string(content[node.StartByte():node.EndByte()]),
+			StartLine:  int(node.StartPosition().Row),
+			EndLine:    int(node.EndPosition().Row),
+			FilePath:   []string{filePath},
+		}
+		mut.Lock()
+		codebase.Chunks = append(codebase.Chunks, chunk)
+		mut.Unlock()
+	}
+
+	if cursor.GotoFirstChild() {
+		walkTree(cursor, content, filePath, allowedKinds, codebase, mut)
+		cursor.GotoParent()
+	}
+
+	if cursor.GotoNextSibling() {
+		walkTree(cursor, content, filePath, allowedKinds, codebase, mut)
+	}
+}
+
+func parseFile(currentPath string, wg *sync.WaitGroup, codebase *types.CodebaseAST, mut *sync.Mutex, sem chan struct{}) {
 	defer wg.Done()
 	defer func() { <-sem }()
 
@@ -40,23 +65,30 @@ func parseFile(currentPath, rootPath string, wg *sync.WaitGroup, sem chan struct
 		return
 	}
 
+	// fmt.Println(string(content))
+
 	parser := parserPool.Get().(*tree_sitter.Parser)
 	defer parserPool.Put(parser)
 
 	tree := parser.Parse(content, nil)
 	defer tree.Close()
 
-	// rootNode := tree.RootNode()
-	// fmt.Println("kind", rootNode.Child(1))
-	// fmt.Println("startpos", rootNode.StartPosition())
-	// fmt.Println("endpos", rootNode.EndPosition())
+	allowedKinds := make(map[string]bool)
+	for _, kind := range utils.NodeTypes[string(lang)] {
+		allowedKinds[kind] = true
+	}
+
+	cursor := tree.Walk()
+	defer cursor.Close()
+	walkTree(cursor, content, currentPath, allowedKinds, codebase, mut)
 }
 
 func ParseCodebase(rootPath string) (*types.CodebaseAST, error) {
-	codebase := &types.CodebaseAST{Root: rootPath}
+	codebase := types.CodebaseAST{Root: rootPath}
 
 	var (
 		wg  sync.WaitGroup
+		mut sync.Mutex
 		sem = make(chan struct{}, runtime.NumCPU())
 	)
 
@@ -74,13 +106,14 @@ func ParseCodebase(rootPath string) (*types.CodebaseAST, error) {
 
 		wg.Add(1)
 		sem <- struct{}{}
-		go parseFile(currentPath, rootPath, &wg, sem)
+		go parseFile(currentPath, &wg, &codebase, &mut, sem)
 
 		return nil
 	})
 
 	wg.Wait()
-	log.Printf("Execution took %s", time.Since(start))
+	log.Println(len(codebase.Chunks))
+	log.Printf("Execution took %s, %s", time.Since(start), codebase.Chunks[5000].SourceCode)
 
-	return codebase, err
+	return &codebase, err
 }

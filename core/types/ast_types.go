@@ -8,24 +8,16 @@ const (
 	LangUnknown    Language = "unknown"
 )
 
-type Symbol struct {
-	Name    string `json:"name"`
-	Kind    string `json:"kind"`
-	Line    int    `json:"line"`
-	EndLine int    `json:"end_line,omitempty"`
-	Doc     string `json:"doc,omitempty"`
-}
-
-type FileNode struct {
-	Path     string   `json:"path"`
-	Language Language `json:"language"`
-	Lines    int      `json:"lines"`
-	Symbols  []Symbol `json:"symbols,omitempty"`
+type Chunk struct {
+	SourceCode string   `json:"sourceCode"`
+	StartLine  int      `json:"startLine"`
+	EndLine    int      `json:"endLine"`
+	FilePath   []string `json:"filePath"`
 }
 
 type CodebaseAST struct {
-	Root  string     `json:"root"`
-	Files []FileNode `json:"files"`
+	Root   string  `json:"root"`
+	Chunks []Chunk `json:"chunks"`
 }
 
 type IndexCodebaseInput struct {
