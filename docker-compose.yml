@@ -1,0 +1,27 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: shepherd
+      POSTGRES_PASSWORD: shepherd
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports: ["5432:5432"]
+
+  server:
+    build: ./server
+    depends_on: [postgres]
+    environment:
+      DATABASE_URL: postgres://postgres:${DB_PASSWORD}@postgres:5432/shepherd
+    ports:
+      - "8080:8080"
+
+  web:
+    build: ./web
+    depends_on: [server]
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8080
+    ports: ["3000:3000"]
+
+volumes:
+  pgdata:

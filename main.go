@@ -1,43 +1,35 @@
 package main
 
 import (
-	"context"
 	"log"
 
-	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"shepherd/core/tools"
+	"shepherd/core/types"
 )
-
-type SearchInput struct {
-	Query string `json:"query"`
-	Limit int    `json:"limit,omitempty"`
-}
-
-func sampleToolCall(ctx context.Context, req *mcp.CallToolRequest, input SearchInput) (
-	*mcp.CallToolResult, any, error,
-) {
-	result := "result...."
-
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			&mcp.TextContent{Text: result},
-		},
-	}, nil, nil
-}
 
 func main() {
 	log.Println("Starting shepherd....")
 
-	server := mcp.NewServer(&mcp.Implementation{
-		Name:    "Shepherd",
-		Version: "0.0.1",
-	}, nil)
+	tools.IndexTesting(types.IndexCodebaseInput{
+		Path: "/Users/nihalahamed/Desktop/kimchi-cli",
+	})
 
-	mcp.AddTool(server, &mcp.Tool{
-		Name:        "search_codebase",
-		Description: "Semantic + BM25 hybrid search over inexed files",
-	}, sampleToolCall)
+	// server := mcp.NewServer(&mcp.Implementation{
+	// 	Name:    "Shepherd",
+	// 	Version: "0.0.1",
+	// }, nil)
 
-	if err := server.Run(context.Background(), &mcp.StdioTransport{}); err != nil {
-		log.Println("Error:", err)
-	}
+	// mcp.AddTool(server, &mcp.Tool{
+	// 	Name:        "search_codebase",
+	// 	Description: "Semantic + BM25 hybrid search over inexed files",
+	// }, tools.SearchCodebase)
+
+	// mcp.AddTool(server, &mcp.Tool{
+	// 	Name:        "index_codebase",
+	// 	Description: "Returns the absolute path of the given codebase directory",
+	// }, tools.IndexCodebase)
+
+	// if err := server.Run(context.Background(), &mcp.StdioTransport{}); err != nil {
+	// 	log.Println("Error:", err)
+	// }
 }
