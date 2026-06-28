@@ -112,12 +112,7 @@ func ParseCodebase(rootPath string) (*types.CodebaseAST, error) {
 	})
 
 	wg.Wait()
-	log.Println(len(codebase.Chunks))
-
-	// for _, ck := range codebase.Chunks {
-	// 	println(len(ck.SourceCode))
-	// }
-	log.Printf("Execution took %s, %s", time.Since(start), codebase.Chunks[5000].SourceCode)
+	log.Printf("Parsed %d chunks in %s", len(codebase.Chunks), time.Since(start))
 
 	return &codebase, err
 }
